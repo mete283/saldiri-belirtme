@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeZone - Hızlı Bildirim</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --cyber-red: #ff003c;
+            --cyber-blue: #00f3ff;
+            --glass-bg: rgba(10, 10, 15, 0.95);
+        }
+
+        body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: #000; overflow: hidden; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+
+        .header {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            z-index: 100; background: var(--glass-bg); padding: 10px 25px;
+            border-radius: 50px; border: 1px solid var(--cyber-blue);
+            color: white; font-weight: bold; text-shadow: 0 0 5px var(--cyber-blue);
+        }
+
+        .bottom-panel {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            z-index: 100; width: 90%; max-width: 450px;
+            background: var(--glass-bg); border-radius: 25px; padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;
+        }
+
+        .panic-btn {
+            background: linear-gradient(45deg, #ff003c, #ff4d00);
+            color: white; border: none; padding: 20px; border-radius: 15px;
+            font-size: 1.4rem; font-weight: 800; cursor: pointer; width: 100%;
+            box-shadow: 0 0 30px rgba(255, 0, 60, 0.4); text-transform: uppercase;
+        }
+
+        /* Tehlike İşareti Animasyonu */
+        .pulse-marker {
+            background: var(--cyber-red);
+            border-radius: 50%;
+            border: 2px solid white;
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.6); box-shadow: 0 0 0 0 rgba(255, 0, 60, 0.7); }
+            70% { transform: scale(1.1); box-shadow: 0 0 0 25px rgba(255, 0, 60, 0); }
+            100% { transform: scale(0.6); box-shadow: 0 0 0 0 rgba(255, 0, 60, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header" id="headerBar">SİSTEM AKTİF // KONUM BEKLENİYOR</div>
+
+    <div id="map"></div>
+
+    <div class="bottom-panel">
+        <button class="panic-btn" id="panicButton">ACİL DURUM BİLDİR</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Haritayı oluştur (İlk başta Türkiye'yi gösterir)
+        const map = L.map('map', { zoomControl: false }).setView([38.96, 35.24], 6);
+        
+        // Koyu Tema Harita Katmanı
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+        let userLat, userLng;
+        let activeMarker = null;
+        let activeCircle = null;
+
+        // 1. Sayfa Açılır Açılmaz Konum İste
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition((pos) => {
+                userLat = pos.coords.latitude;
+                userLng = pos.coords.longitude;
+                
+                // İlk konum alındığında haritayı oraya odakla
+                if (!activeMarker) {
+                    map.setView([userLat, userLng], 16);
+                    document.getElementById('headerBar').innerText = "SİSTEM ÇEVRİMİÇİ // GÜVENLİ";
+                }
+            }, () => {
+                alert("Lütfen konum izni verin!");
+            }, { enableHighAccuracy: true });
+        }
+
+        // 2. Butona Basıldığında İşaret Koy
+        document.getElementById('panicButton').addEventListener('click', () => {
+            if (userLat && userLng) {
+                // Varsa eski işaretleri temizle
+                if (activeMarker) map.removeLayer(activeMarker);
+                if (activeCircle) map.removeLayer(activeCircle);
+
+                // Haritayı merkeze al
+                map.setView([userLat, userLng], 18);
+
+                // Yanıp sönen kırmızı marker
+                const dangerIcon = L.divIcon({ className: 'pulse-marker', iconSize: [20, 20] });
+                activeMarker = L.marker([userLat, userLng], { icon: dangerIcon }).addTo(map)
+                    .bindPopup("<b style='color:red;'>SALDIRI BİLDİRİLDİ!</b>").openPopup();
+
+                // Kırmızı etki alanı halkası
+                activeCircle = L.circle([userLat, userLng], { 
+                    color: 'red', 
+                    fillColor: '#ff003c', 
+                    fillOpacity: 0.3, 
+                    radius: 150 
+                }).addTo(map);
+
+                // UI Güncelle
+                document.getElementById('headerBar').innerText = "!! KRİTİK: TEHLİKE BİLDİRİLDİ !!";
+                document.getElementById('headerBar').style.borderColor = "red";
+            } else {
+                alert("Konumunuz henüz tespit edilemedi.");
+            }
+        });
+    </script>
+</body>
+</html>
