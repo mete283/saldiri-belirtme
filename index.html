@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeZone - Hızlı Bildirim</title>
+    <title>SafeZone - Canlı Takip</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
@@ -20,6 +20,7 @@
             z-index: 100; background: var(--glass-bg); padding: 10px 25px;
             border-radius: 50px; border: 1px solid var(--cyber-blue);
             color: white; font-weight: bold; text-shadow: 0 0 5px var(--cyber-blue);
+            white-space: nowrap;
         }
 
         .bottom-panel {
@@ -36,7 +37,15 @@
             box-shadow: 0 0 30px rgba(255, 0, 60, 0.4); text-transform: uppercase;
         }
 
-        /* Tehlike İşareti Animasyonu */
+        /* Kullanıcı Noktası (Mavi Neon) */
+        .user-dot {
+            background: var(--cyber-blue);
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 0 15px var(--cyber-blue);
+        }
+
+        /* Tehlike İşareti (Kırmızı Pulse) */
         .pulse-marker {
             background: var(--cyber-red);
             border-radius: 50%;
@@ -53,7 +62,7 @@
 </head>
 <body>
 
-    <div class="header" id="headerBar">SİSTEM AKTİF // KONUM BEKLENİYOR</div>
+    <div class="header" id="headerBar">GÜVENLİĞİNİZ İÇİN KONUM AKTİF</div>
 
     <div id="map"></div>
 
@@ -63,60 +72,46 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // Haritayı oluştur (İlk başta Türkiye'yi gösterir)
         const map = L.map('map', { zoomControl: false }).setView([38.96, 35.24], 6);
-        
-        // Koyu Tema Harita Katmanı
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
         let userLat, userLng;
-        let activeMarker = null;
-        let activeCircle = null;
+        let userMarker = null; // Mavi nokta
+        let dangerMarker = null; // Kırmızı işaret
 
-        // 1. Sayfa Açılır Açılmaz Konum İste
+        // 1. Canlı Konum İzleme
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition((pos) => {
                 userLat = pos.coords.latitude;
                 userLng = pos.coords.longitude;
                 
-                // İlk konum alındığında haritayı oraya odakla
-                if (!activeMarker) {
-                    map.setView([userLat, userLng], 16);
-                    document.getElementById('headerBar').innerText = "SİSTEM ÇEVRİMİÇİ // GÜVENLİ";
+                // Mavi Kullanıcı Noktasını Güncelle
+                const userIcon = L.divIcon({ className: 'user-dot', iconSize: [12, 12] });
+                
+                if (!userMarker) {
+                    userMarker = L.marker([userLat, userLng], { icon: userIcon }).addTo(map)
+                        .bindPopup("Siz buradasınız").openPopup();
+                    map.setView([userLat, userLng], 17);
+                } else {
+                    userMarker.setLatLng([userLat, userLng]);
                 }
-            }, () => {
-                alert("Lütfen konum izni verin!");
-            }, { enableHighAccuracy: true });
+            }, null, { enableHighAccuracy: true });
         }
 
-        // 2. Butona Basıldığında İşaret Koy
+        // 2. Tehlike Bildirimi
         document.getElementById('panicButton').addEventListener('click', () => {
             if (userLat && userLng) {
-                // Varsa eski işaretleri temizle
-                if (activeMarker) map.removeLayer(activeMarker);
-                if (activeCircle) map.removeLayer(activeCircle);
+                if (dangerMarker) map.removeLayer(dangerMarker);
 
-                // Haritayı merkeze al
-                map.setView([userLat, userLng], 18);
-
-                // Yanıp sönen kırmızı marker
                 const dangerIcon = L.divIcon({ className: 'pulse-marker', iconSize: [20, 20] });
-                activeMarker = L.marker([userLat, userLng], { icon: dangerIcon }).addTo(map)
+                dangerMarker = L.marker([userLat, userLng], { icon: dangerIcon }).addTo(map)
                     .bindPopup("<b style='color:red;'>SALDIRI BİLDİRİLDİ!</b>").openPopup();
 
-                // Kırmızı etki alanı halkası
-                activeCircle = L.circle([userLat, userLng], { 
-                    color: 'red', 
-                    fillColor: '#ff003c', 
-                    fillOpacity: 0.3, 
-                    radius: 150 
-                }).addTo(map);
+                L.circle([userLat, userLng], { color: 'red', fillColor: '#ff003c', fillOpacity: 0.3, radius: 100 }).addTo(map);
 
-                // UI Güncelle
-                document.getElementById('headerBar').innerText = "!! KRİTİK: TEHLİKE BİLDİRİLDİ !!";
+                document.getElementById('headerBar').innerText = "!! DİKKAT: TEHLİKE BÖLGESİ !!";
+                document.getElementById('headerBar').style.color = "red";
                 document.getElementById('headerBar').style.borderColor = "red";
-            } else {
-                alert("Konumunuz henüz tespit edilemedi.");
             }
         });
     </script>
