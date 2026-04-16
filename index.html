@@ -4,47 +4,64 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css"/>
-  <title>Lütfen Geri Dön!</title>
+  <title>Özür Dilerim ❤️</title>
 </head>
 <body>
+  
   <div class="container">
     <div class="card" id="mainCard">
-      <div class="icon" id="emoji">🥺</div>
+      <img src="54382.jpg" alt="Üzgün Kedi" class="bubu-img" id="statusImage">
+      
       <h1 id="question">Sana bir şey sorabilir miyim?</h1>
-      <p id="subtext"></p>
+      <p id="subtext">Dürüst ol ama...</p>
       
       <div class="rgb-line"></div>
       
       <div class="buttons" id="buttonArea">
-        <button class="primary-btn" id="yesBtn" onclick="sonrakiSoru()">Evet</button>
-        <button class="secondary-btn" id="noBtn" onclick="hayirTiklandi()">Hayır</button>
+        <button class="primary-btn yes-btn" id="yesBtn" onclick="sonrakiSoru()">Evet</button>
+        <button class="secondary-btn no-btn" id="noBtn" onclick="hayirTiklandi()">Hayır</button>
       </div>
     </div>
   </div>
 
   <script>
     let asama = 0;
+
+    // Senin yüklediğin dosya isimlerine göre akışı düzenledim
     const questions = [
-      { q: "Beni hala birazcık da olsa seviyor musun?", s: "Lütfen doğruyu söyle...", e: "😓" },
-      { q: "Peki, bir şans daha verirmisin?", s: "lütfennn", e: "😭" },
-      { q: "Hatalarımı affedermisin?", s: " ", e: "😔" },
-      { q: "özürrr dilerimmmm", s: "", e: "🙁" }
+      { 
+        q: "Özledim, Barışalım mı?", 
+        s: "Küs kalmaya gerek yok bence 👉👈", 
+        img: "54383.jpg" // Utangaç/Bekleyen kedi
+      },
+      { 
+        q: "Hatalarımı affedip bana bir şans verir misin?", 
+        s: "", 
+        img: "54385.jpg" // Yalvaran kedi
+      },
+      { 
+        q: "Yani şimdi resmen barıştık mı? 😍", 
+        s: "Son kez onayla, kaçış yok artık sjsjsj", 
+        img: "54387.jpg" // Mutlu kedi
+      }
     ];
 
     const noBtn = document.getElementById('noBtn');
     const yesBtn = document.getElementById('yesBtn');
     const questionText = document.getElementById('question');
     const subtext = document.getElementById('subtext');
-    const emoji = document.getElementById('emoji');
+    const statusImage = document.getElementById('statusImage');
     const card = document.getElementById('mainCard');
 
     function sonrakiSoru() {
       if (asama < questions.length) {
         questionText.innerText = questions[asama].q;
         subtext.innerText = questions[asama].s;
-        emoji.innerText = questions[asama].e;
+        statusImage.src = questions[asama].img;
         
-        // Son aşamada kaçış başlasın
+        noBtn.style.display = "inline-block";
+        noBtn.style.position = "static";
+
         if (asama === questions.length - 1) {
           baslatKacis();
         }
@@ -55,52 +72,49 @@
     }
 
     function hayirTiklandi() {
-        subtext.innerText = "Evet de, tekrar dene!";
-        emoji.innerText = " ";
-        // Hayır'a basılırsa Evet butonunu hafif büyüt (psikolojik baskı)
-        yesBtn.style.transform = `scale(${1 + (asama * 0.1)})`;
+        subtext.innerText = "Hayır deme şansın yok ki, tekrar dene!";
+        // Hayır'a basınca çıkan tripli kedi görseli
+        statusImage.src = "54384.jpg"; 
+        yesBtn.style.transform = `scale(${1 + (asama * 0.15)})`;
     }
 
     function baslatKacis() {
+      subtext.innerText = "(Son Soru) Bu Arada Hayıra Tıklayamazsın Dene İstersen";
+
       const moveButton = (e) => {
-        // Tıklama olayını tamamen durdur
         if (e) {
-            e.preventDefault();
-            e.stopPropagation();
+          e.preventDefault();
+          e.stopPropagation();
         }
 
         const maxWidth = window.innerWidth - noBtn.offsetWidth;
         const maxHeight = window.innerHeight - noBtn.offsetHeight;
 
-        const randomX = Math.floor(Math.random() * (maxWidth - 20)) + 10;
-        const randomY = Math.floor(Math.random() * (maxHeight - 20)) + 10;
+        const randomX = Math.floor(Math.random() * (maxWidth - 40)) + 20;
+        const randomY = Math.floor(Math.random() * (maxHeight - 40)) + 20;
 
         noBtn.style.position = "fixed";
-        noBtn.style.zIndex = "999";
+        noBtn.style.zIndex = "9999";
         noBtn.style.left = randomX + "px";
         noBtn.style.top = randomY + "px";
         
-        subtext.innerText = "Hayıra Tıklayamazsın ki! Boşuna uğraşma sjsjsj";
-        
-        // Evet butonu her kaçışta daha agresif büyür
-        let guncelBuyume = 1 + (asama * 0.2);
+        let guncelBuyume = 1 + (asama * 0.25);
         yesBtn.style.transform = `scale(${guncelBuyume})`;
       };
 
       noBtn.addEventListener('mouseover', moveButton);
       noBtn.addEventListener('click', moveButton);
-      noBtn.addEventListener('touchstart', moveButton); // Mobil için dokunma desteği
+      noBtn.addEventListener('touchstart', moveButton);
     }
 
     function finalEkrani() {
       card.innerHTML = `
-        <div class="icon">❤️</div>
-        <h1>seni çoooookk seviyorummm</h1>
-        <p></p>
+        <img src="54391.jpg" alt="Mutlu Son" class="bubu-img">
+        <h1 class="final-text">YAŞASIN! ❤️</h1>
+        <p>Biliyordum eninde sonunda evet diyeceğini😝</p>
         <div class="rgb-line"></div>
         <p class="footer-note"></p>
       `;
-      // Butonu eski haline getir
       noBtn.style.display = "none"; 
     }
   </script>
