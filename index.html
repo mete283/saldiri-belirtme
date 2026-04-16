@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css"/>
+  <title>Lütfen Geri Dön!</title>
+</head>
+<body>
+  <div class="container">
+    <div class="card" id="mainCard">
+      <div class="icon" id="emoji">🥺</div>
+      <h1 id="question">Sana bir şey sorabilir miyim?</h1>
+      <p id="subtext"></p>
+      
+      <div class="rgb-line"></div>
+      
+      <div class="buttons" id="buttonArea">
+        <button class="primary-btn" id="yesBtn" onclick="sonrakiSoru()">Evet</button>
+        <button class="secondary-btn" id="noBtn" onclick="hayirTiklandi()">Hayır</button>
+      </div>
+    </div>
+  </div>
 
+  <script>
+    let asama = 0;
+    const questions = [
+      { q: "Beni hala birazcık da olsa seviyor musun?", s: "Lütfen doğruyu söyle...", e: "😓" },
+      { q: "Peki, bir şans daha verirmisin?", s: "lütfennn", e: "😭" },
+      { q: "Hatalarımı affedermisin?", s: " ", e: "😔" },
+      { q: "özürrr dilerimmmm", s: "", e: "🙁" }
+    ];
+
+    const noBtn = document.getElementById('noBtn');
+    const yesBtn = document.getElementById('yesBtn');
+    const questionText = document.getElementById('question');
+    const subtext = document.getElementById('subtext');
+    const emoji = document.getElementById('emoji');
+    const card = document.getElementById('mainCard');
+
+    function sonrakiSoru() {
+      if (asama < questions.length) {
+        questionText.innerText = questions[asama].q;
+        subtext.innerText = questions[asama].s;
+        emoji.innerText = questions[asama].e;
+        
+        // Son aşamada kaçış başlasın
+        if (asama === questions.length - 1) {
+          baslatKacis();
+        }
+        asama++;
+      } else {
+        finalEkrani();
+      }
+    }
+
+    function hayirTiklandi() {
+        subtext.innerText = "Evet de, tekrar dene!";
+        emoji.innerText = " ";
+        // Hayır'a basılırsa Evet butonunu hafif büyüt (psikolojik baskı)
+        yesBtn.style.transform = `scale(${1 + (asama * 0.1)})`;
+    }
+
+    function baslatKacis() {
+      const moveButton = (e) => {
+        // Tıklama olayını tamamen durdur
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        const maxWidth = window.innerWidth - noBtn.offsetWidth;
+        const maxHeight = window.innerHeight - noBtn.offsetHeight;
+
+        const randomX = Math.floor(Math.random() * (maxWidth - 20)) + 10;
+        const randomY = Math.floor(Math.random() * (maxHeight - 20)) + 10;
+
+        noBtn.style.position = "fixed";
+        noBtn.style.zIndex = "999";
+        noBtn.style.left = randomX + "px";
+        noBtn.style.top = randomY + "px";
+        
+        subtext.innerText = "Hayıra Tıklayamazsın ki! Boşuna uğraşma sjsjsj";
+        
+        // Evet butonu her kaçışta daha agresif büyür
+        let guncelBuyume = 1 + (asama * 0.2);
+        yesBtn.style.transform = `scale(${guncelBuyume})`;
+      };
+
+      noBtn.addEventListener('mouseover', moveButton);
+      noBtn.addEventListener('click', moveButton);
+      noBtn.addEventListener('touchstart', moveButton); // Mobil için dokunma desteği
+    }
+
+    function finalEkrani() {
+      card.innerHTML = `
+        <div class="icon">❤️</div>
+        <h1>seni çoooookk seviyorummm</h1>
+        <p></p>
+        <div class="rgb-line"></div>
+        <p class="footer-note"></p>
+      `;
+      // Butonu eski haline getir
+      noBtn.style.display = "none"; 
+    }
+  </script>
+</body>
+</html>
