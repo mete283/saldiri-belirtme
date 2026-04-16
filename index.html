@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeZone - Canlı Takip</title>
+    <title>SafeZone Pro - Kriz Yönetimi</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         :root {
             --cyber-red: #ff003c;
             --cyber-blue: #00f3ff;
-            --glass-bg: rgba(10, 10, 15, 0.95);
+            --glass-bg: rgba(10, 10, 15, 0.96);
         }
 
         body, html { margin: 0; padding: 0; height: 100%; font-family: 'Segoe UI', sans-serif; background: #000; overflow: hidden; }
@@ -17,46 +17,48 @@
 
         .header {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            z-index: 100; background: var(--glass-bg); padding: 10px 25px;
+            z-index: 100; background: var(--glass-bg); padding: 12px 30px;
             border-radius: 50px; border: 1px solid var(--cyber-blue);
             color: white; font-weight: bold; text-shadow: 0 0 5px var(--cyber-blue);
-            white-space: nowrap;
+            white-space: nowrap; transition: 0.5s;
         }
 
         .bottom-panel {
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
             z-index: 100; width: 90%; max-width: 450px;
-            background: var(--glass-bg); border-radius: 25px; padding: 20px;
+            background: var(--glass-bg); border-radius: 25px; padding: 25px;
             border: 1px solid rgba(255, 255, 255, 0.1); text-align: center;
         }
 
         .panic-btn {
             background: linear-gradient(45deg, #ff003c, #ff4d00);
             color: white; border: none; padding: 20px; border-radius: 15px;
-            font-size: 1.4rem; font-weight: 800; cursor: pointer; width: 100%;
-            box-shadow: 0 0 30px rgba(255, 0, 60, 0.4); text-transform: uppercase;
+            font-size: 1.5rem; font-weight: 900; cursor: pointer; width: 100%;
+            box-shadow: 0 0 40px rgba(255, 0, 60, 0.5); text-transform: uppercase;
         }
 
-        /* Kullanıcı Noktası (Mavi Neon) */
-        .user-dot {
-            background: var(--cyber-blue);
-            border: 2px solid white;
-            border-radius: 50%;
-            box-shadow: 0 0 15px var(--cyber-blue);
+        /* Mavi Nokta (Kullanıcı) */
+        .user-dot { background: var(--cyber-blue); border: 2px solid white; border-radius: 50%; box-shadow: 0 0 15px var(--cyber-blue); }
+
+        /* Kırmızı Dev Daire (Uzaktan Görünmesi İçin) */
+        .danger-marker-wrapper { position: relative; width: 100px; height: 100px; transform: translate(-50%, -50%); }
+        
+        .huge-danger-icon {
+            position: absolute; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(255, 0, 60, 0.8) 0%, rgba(255, 0, 60, 0.2) 60%, rgba(255, 0, 60, 0) 70%);
+            border-radius: 50%; border: 1px solid var(--cyber-red);
+            animation: pulse-danger 1.5s infinite;
         }
 
-        /* Tehlike İşareti (Kırmızı Pulse) */
-        .pulse-marker {
-            background: var(--cyber-red);
-            border-radius: 50%;
-            border: 2px solid white;
-            animation: pulse 1.2s infinite;
+        @keyframes pulse-danger {
+            0% { transform: scale(0.8); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 0.2; }
+            100% { transform: scale(0.8); opacity: 0.8; }
         }
 
-        @keyframes pulse {
-            0% { transform: scale(0.6); box-shadow: 0 0 0 0 rgba(255, 0, 60, 0.7); }
-            70% { transform: scale(1.1); box-shadow: 0 0 0 25px rgba(255, 0, 60, 0); }
-            100% { transform: scale(0.6); box-shadow: 0 0 0 0 rgba(255, 0, 60, 0); }
+        /* Geri Sayım Metni */
+        .timer-popup {
+            color: red; font-size: 1.2rem; font-weight: 800; text-align: center; margin-top: 5px;
         }
     </style>
 </head>
@@ -72,12 +74,14 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
+        // Harita Koyu Mod ve Başlangıç Konumu
         const map = L.map('map', { zoomControl: false }).setView([38.96, 35.24], 6);
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
         let userLat, userLng;
         let userMarker = null; // Mavi nokta
-        let dangerMarker = null; // Kırmızı işaret
+        let dangerLayer = null; // Kırmızı alan katmanı
+        let activeTimer = null; // Geri sayım nesnesi
 
         // 1. Canlı Konum İzleme
         if (navigator.geolocation) {
@@ -85,7 +89,6 @@
                 userLat = pos.coords.latitude;
                 userLng = pos.coords.longitude;
                 
-                // Mavi Kullanıcı Noktasını Güncelle
                 const userIcon = L.divIcon({ className: 'user-dot', iconSize: [12, 12] });
                 
                 if (!userMarker) {
@@ -98,20 +101,65 @@
             }, null, { enableHighAccuracy: true });
         }
 
-        // 2. Tehlike Bildirimi
+        // 2. Tehlike Bildirimi (Uzaktan Görünür ve Zamanlı)
         document.getElementById('panicButton').addEventListener('click', () => {
             if (userLat && userLng) {
-                if (dangerMarker) map.removeLayer(dangerMarker);
+                // Varsa eski tehlikeyi temizle
+                if (dangerLayer) map.removeLayer(dangerLayer);
+                if (activeTimer) clearInterval(activeTimer);
 
-                const dangerIcon = L.divIcon({ className: 'pulse-marker', iconSize: [20, 20] });
-                dangerMarker = L.marker([userLat, userLng], { icon: dangerIcon }).addTo(map)
-                    .bindPopup("<b style='color:red;'>SALDIRI BİLDİRİLDİ!</b>").openPopup();
+                const panicBtn = document.getElementById('panicButton');
+                panicBtn.innerText = "YAYINLANIYOR...";
+                panicBtn.disabled = true;
 
-                L.circle([userLat, userLng], { color: 'red', fillColor: '#ff003c', fillOpacity: 0.3, radius: 100 }).addTo(map);
+                // Haritayı Uzaklaştır (Dev dairenin görünmesi için Zoom: 12 ideal)
+                map.setView([userLat, userLng], 12);
 
-                document.getElementById('headerBar').innerText = "!! DİKKAT: TEHLİKE BÖLGESİ !!";
+                // --- UZAKTAN GÖRÜNÜR DEV KIRMIZI ALAN ---
+                dangerLayer = L.layerGroup().addTo(map);
+
+                // CSS temelli animasyonlu dev daire (POI)
+                const dangerIcon = L.divIcon({ className: 'huge-danger-icon', iconSize: [100, 100], iconAnchor: [50, 50] });
+                L.marker([userLat, userLng], { icon: dangerIcon }).addTo(dangerLayer);
+
+                // Arka planı kaplayan halka (Daha geniş alan)
+                L.circle([userLat, userLng], { 
+                    color: '#ff003c', fillColor: '#ff003c', fillOpacity: 0.1, radius: 2500, stroke: false 
+                }).addTo(dangerLayer);
+
+                // Popup ve Geri Sayım Mantığı
+                let timeLeft = 50;
+                const popupContent = L.DomUtil.create('div');
+                popupContent.innerHTML = `<b style='color:red;'>SALDIRI BİLDİRİLDİ!</b><div class='timer-popup' id='timer-display'>${timeLeft}s</div>`;
+                
+                L.marker([userLat, userLng]).addTo(dangerLayer).bindPopup(popupContent).openPopup();
+
+                // UI Güncelle
+                document.getElementById('headerBar').innerText = "!! KRİTİK: TEHLİKE ALANI !!";
                 document.getElementById('headerBar').style.color = "red";
                 document.getElementById('headerBar').style.borderColor = "red";
+
+                // --- 50 SANİYELİK GERİ SAYIM BAŞLAT ---
+                activeTimer = setInterval(() => {
+                    timeLeft--;
+                    const timerDisplay = document.getElementById('timer-display');
+                    if (timerDisplay) timerDisplay.innerText = `${timeLeft}s`;
+
+                    if (timeLeft <= 0) {
+                        clearInterval(activeTimer);
+                        map.removeLayer(dangerLayer); // Kırmızı alanı kaldır
+                        
+                        // Sistemi sıfırla
+                        panicBtn.innerText = "ACİL DURUM BİLDİR";
+                        panicBtn.disabled = false;
+                        document.getElementById('headerBar').innerText = "KONUM AKTİF // GÜVENLİ";
+                        document.getElementById('headerBar').style.color = "white";
+                        document.getElementById('headerBar').style.borderColor = "#00f3ff";
+                    }
+                }, 1000); // Saniyede bir çalışır
+
+            } else {
+                alert("Konumunuz henüz tespit edilemedi. Lütfen izin verin.");
             }
         });
     </script>
